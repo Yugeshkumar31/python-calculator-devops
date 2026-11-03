@@ -1,0 +1,33 @@
+name: Python Calculator CI Pipeline
+
+# Trigger workflow automatically on every push to main
+on:
+  push:
+    branches:
+      - main
+
+# Minimum permissions required to read repository contents
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+
+    # GitHub provides an Ubuntu virtual machine
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # Step 1: Download repository source code
+      - name: Checkout source code
+        uses: actions/checkout@v7
+
+      # Step 2: Build Docker image
+      - name: Build Docker image
+        run: |
+          docker build -t python-calculator:ci .
+
+      # Step 3: Run unit tests inside Docker container
+      - name: Run unit tests inside Docker
+        run: |
+          docker run --rm python-calculator:ci
