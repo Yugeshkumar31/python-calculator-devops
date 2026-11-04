@@ -207,7 +207,3 @@ AWS SAM uses this template to create and manage the Lambda function, API Gateway
 ## Author
 
 **G Yugesh Kumar**
-
-Integrated M.Tech – Computer Science and Engineering (Data Science)
-
-Vellore Institute of Technology (VIT)
