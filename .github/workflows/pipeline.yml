@@ -1,33 +1,71 @@
-name: Python Calculator CI Pipeline
 
-# Trigger workflow automatically on every push to main
+name: Python Calculator CI-CD Pipeline
+
 on:
   push:
-    branches:
-      - main
+  pull_request:
 
-# Minimum permissions required to read repository contents
 permissions:
   contents: read
 
 jobs:
-  build-and-test:
 
-    # GitHub provides an Ubuntu virtual machine
+  # JOB 1: Continuous Integration
+  build-and-test:
+    name: Build Docker Image and Run Tests
     runs-on: ubuntu-latest
 
     steps:
-
-      # Step 1: Download repository source code
       - name: Checkout source code
         uses: actions/checkout@v7
 
-      # Step 2: Build Docker image
       - name: Build Docker image
         run: |
           docker build -t python-calculator:ci .
 
-      # Step 3: Run unit tests inside Docker container
       - name: Run unit tests inside Docker
         run: |
           docker run --rm python-calculator:ci
+
+
+  # JOB 2: Continuous Deployment
+  deploy-to-aws:
+    name: Deploy to AWS using SAM
+    needs: build-and-test
+
+    # Deploy only after a push to main, never for pull requests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v7
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Verify AWS identity
+        run: |
+          aws sts get-caller-identity
+
+      - name: Set up AWS SAM CLI
+        uses: aws-actions/setup-sam@v3
+        with:
+          use-installer: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build SAM application
+        run: |
+          sam build --use-container
+
+      - name: Deploy application to AWS
+        run: |
+          sam deploy \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --capabilities CAPABILITY_NAMED_IAM

@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Python Calculator Serverless Application
+
+Globals:
+  Function:
+    Runtime: python3.13
+    Timeout: 10
+    MemorySize: 128
+    Architectures:
+      - x86_64
+
+Resources:
+
+  CalculatorExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: python-calculator-lambda-execution-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  CalculatorApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+
+  CalculatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: python-calculator-function
+      CodeUri: app/
+      Handler: lambda_handler.lambda_handler
+      Role: !GetAtt CalculatorExecutionRole.Arn
+      Events:
+        Calculate:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref CalculatorApi
+            Path: /calculate
+            Method: GET
+
+Outputs:
+
+  CalculatorApiUrl:
+    Description: Calculator API Gateway endpoint
+    Value: !Sub
+      - 'https://${ApiId}.execute-api.${AWS::Region}.amazonaws.com/calculate'
+      - ApiId: !Ref CalculatorApi
+
+  CalculatorLambdaArn:
+    Description: Calculator Lambda function ARN
+    Value: !GetAtt CalculatorFunction.Arn
+
+  CalculatorExecutionRoleArn:
+    Description: Lambda execution role ARN
+    Value: !GetAtt CalculatorExecutionRole.Arn
